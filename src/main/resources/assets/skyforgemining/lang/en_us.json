@@ -1,4 +1,8 @@
 {
   "item.skyforgemining.basic_drill": "Basic Drill",
-  "item.skyforgemining.rough_ruby": "Rough Ruby"
+  "item.skyforgemining.divans_drill": "Divan's Drill ♢",
+  "item.skyforgemining.rough_ruby": "Rough Ruby",
+  "creativetab.skyforgemining.skyforge_tab": "Skyforge Mining",
+  "item.skyforgemining.mastery_infuser": "Mastery Infuser",
+  "item.skyforgemining.mastery_capsule": "Mastery Capsule"
 }

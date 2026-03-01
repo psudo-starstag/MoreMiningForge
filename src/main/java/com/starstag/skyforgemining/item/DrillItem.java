@@ -1,15 +1,13 @@
 package com.starstag.skyforgemining.item;
 
-import com.starstag.skyforgemining.mining.MiningEvents;
-import com.starstag.skyforgemining.player.MiningProvider;
-import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.PickaxeItem;
-import net.minecraft.world.item.Tier;
-import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class DrillItem extends PickaxeItem {
@@ -18,74 +16,135 @@ public class DrillItem extends PickaxeItem {
     private final int baseMiningFortune;
 
     public DrillItem(Tier tier,
+                     int attackDamage,
+                     float attackSpeed,
+                     Properties properties,
                      int baseMiningSpeed,
-                     int baseMiningFortune,
-                     Properties properties) {
+                     int baseMiningFortune) {
 
-        super(tier, 1, -2.8F, properties);
+        super(tier, attackDamage, attackSpeed, properties);
         this.baseMiningSpeed = baseMiningSpeed;
         this.baseMiningFortune = baseMiningFortune;
     }
 
-    // -------------------------
-    // Mining Speed Logic
-    // -------------------------
+    /*
+     * =========================
+     * NBT HELPERS
+     * =========================
+     */
 
-    @Override
-    public float getDestroySpeed(ItemStack stack,
-                                 net.minecraft.world.level.block.state.BlockState state) {
-
-        float vanillaSpeed = super.getDestroySpeed(stack, state);
-
-        int levelBonus = MiningEvents.getMiningSpeedBonus();
-
-        return vanillaSpeed + baseMiningSpeed + levelBonus;
+    public int getDrillLevel(ItemStack stack) {
+        return stack.getOrCreateTag().getInt("DrillLevel");
     }
 
-    // -------------------------
-    // Tooltip
-    // -------------------------
+    public int getDrillXp(ItemStack stack) {
+        return stack.getOrCreateTag().getInt("DrillXP");
+    }
+
+    public void addXp(ItemStack stack, int amount) {
+
+        int currentXp = getDrillXp(stack);
+        int level = getDrillLevel(stack);
+
+        currentXp += amount;
+
+        int xpRequired = getXpForNextLevel(level);
+
+        while (currentXp >= xpRequired) {
+            currentXp -= xpRequired;
+            level++;
+            xpRequired = getXpForNextLevel(level);
+        }
+
+        stack.getOrCreateTag().putInt("DrillXP", currentXp);
+        stack.getOrCreateTag().putInt("DrillLevel", level);
+    }
+
+    private int getXpForNextLevel(int level) {
+        return (int)(100 * Math.pow(level + 1, 1.4));
+    }
+
+    /*
+     * =========================
+     * MINING SPEED
+     * =========================
+     */
+
+    @Override
+    public float getDestroySpeed(ItemStack stack, BlockState state) {
+
+        float vanilla = super.getDestroySpeed(stack, state);
+
+        int level = getDrillLevel(stack);
+        int totalSpeed = baseMiningSpeed + (level * 2);
+
+        return vanilla + totalSpeed;
+    }
+
+    public int getTotalFortune(ItemStack stack) {
+        return baseMiningFortune + getDrillLevel(stack);
+    }
+
+    public void setDrillXp(ItemStack stack, int xp) {
+        stack.getOrCreateTag().putInt("DrillXP", xp);
+        stack.getOrCreateTag().putInt("DrillLevel", 0);
+    }
+
+    // Get total XP accumulated across all levels
+    public int getTotalXp(ItemStack stack) {
+        int level = getDrillLevel(stack);
+        int currentXp = getDrillXp(stack);
+
+        // Sum up all XP spent reaching current level
+        int totalSpent = 0;
+        for (int i = 0; i < level; i++) {
+            totalSpent += getXpForNextLevel(i);
+        }
+
+        return totalSpent + currentXp;
+    }
+
+    // Set drill back to zero properly
+    public void resetDrill(ItemStack stack) {
+        stack.getOrCreateTag().putInt("DrillXP", 0);
+        stack.getOrCreateTag().putInt("DrillLevel", 0);
+    }
+
+    /*
+     * =========================
+     * TOOLTIP
+     * =========================
+     */
 
     @Override
     public void appendHoverText(ItemStack stack,
-                                Level level,
+                                @Nullable Level level,
                                 List<Component> tooltip,
                                 TooltipFlag flag) {
 
-        if (level != null && level.isClientSide) {
+        int drillLevel = getDrillLevel(stack);
+        int drillXp = getDrillXp(stack);
+        int xpRequired = getXpForNextLevel(drillLevel);
 
-            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc.player != null) {
+        tooltip.add(Component.literal("§8Drill"));
+        tooltip.add(Component.literal(" "));
+        tooltip.add(Component.literal("§6Drill Mastery: §e" + drillLevel));
+        tooltip.add(Component.literal("§7XP: §a" + drillXp + "§7/§a" + xpRequired));
+        tooltip.add(Component.literal(" "));
 
-                mc.player.getCapability(MiningProvider.MINING_CAP).ifPresent(data -> {
+        if (Screen.hasShiftDown()) {
+            tooltip.add(Component.literal("§6Mining Speed: §e" + (baseMiningSpeed + (drillLevel * 2))));
+            tooltip.add(Component.literal("§7Base Mining Speed: §6" + baseMiningSpeed));
+            tooltip.add(Component.literal("§6Mining Fortune: §e" + getTotalFortune(stack)));
+            tooltip.add(Component.literal("§7Base Fortune: §6" + baseMiningFortune));
+            tooltip.add(Component.literal("§7Mastery Bonus: §6" + drillLevel));
+            tooltip.add(Component.literal(" "));
+            tooltip.add(Component.literal("§8(10 Fortune = +1 Extra Drop)"));
+            tooltip.add(Component.literal(" "));
+        } else {
+            tooltip.add(Component.literal("§8[§eShift§8] for more details"));
+            tooltip.add(Component.literal(" "));
 
-                    int levelSpeedBonus = data.getMiningLevel() * 2;
-                    int levelFortuneBonus = data.getMiningLevel();
-
-                    int totalSpeed = baseMiningSpeed + levelSpeedBonus;
-                    int totalFortune = baseMiningFortune + levelFortuneBonus;
-                    int extraDrops = totalFortune / 10;
-
-                    tooltip.add(Component.literal(" "));
-                    tooltip.add(Component.literal("§6Mining Stats"));
-                    tooltip.add(Component.literal("Mining Level: §e" + data.getMiningLevel()));
-                    tooltip.add(Component.literal("Total Speed: §a" + totalSpeed));
-                    tooltip.add(Component.literal("Total Fortune: §b" + totalFortune));
-                    tooltip.add(Component.literal("Extra Drops: §6+" + extraDrops));
-                });
-            }
         }
-    }
-
-    // -------------------------
-    // Getters (Used in MiningEvents)
-    // -------------------------
-
-    public int getBaseMiningFortune() {
-        return baseMiningFortune;
-    }
-
-    public int getBaseMiningSpeed() {
-        return baseMiningSpeed;
     }
 }

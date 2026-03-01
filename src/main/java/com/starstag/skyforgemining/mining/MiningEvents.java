@@ -1,115 +1,116 @@
 package com.starstag.skyforgemining.mining;
 
-import net.minecraft.network.chat.Component;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import com.starstag.skyforgemining.SkyforgeMining;
-import net.minecraftforge.event.AttachCapabilitiesEvent;
+import com.starstag.skyforgemining.collection.CollectionProvider;
+import com.starstag.skyforgemining.collection.CollectionType;
+import com.starstag.skyforgemining.item.DrillItem;
+
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import com.starstag.skyforgemining.player.MiningProvider;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.level.BlockEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Mod.EventBusSubscriber(modid = SkyforgeMining.MODID)
 public class MiningEvents {
 
-    private static int miningXp = 0;
-    private static int miningLevel = 1;
+    // Track player-placed blocks
+    private static final Set<BlockPos> placedBlocks = new HashSet<>();
 
+
+
+    /*
+     * =========================
+     * Track Player Placed Blocks
+     * =========================
+     */
     @SubscribeEvent
-    public static void onPlayerClone(PlayerEvent.Clone event) {
+    public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (event.getLevel().isClientSide()) return;
 
-        // Only copy if the player died
-        if (!event.isWasDeath()) return;
-
-        event.getOriginal().getCapability(MiningProvider.MINING_CAP).ifPresent(oldData -> {
-
-            event.getEntity().getCapability(MiningProvider.MINING_CAP).ifPresent(newData -> {
-
-                newData.setMiningLevel(oldData.getMiningLevel());
-                newData.setMiningXp(oldData.getMiningXp());
-
-            });
-
-        });
+        if (event.getEntity() instanceof Player) {
+            placedBlocks.add(event.getPos().immutable());
+        }
     }
 
+    /*
+     * =========================
+     * Collection Logic
+     * =========================
+     */
     @SubscribeEvent
     public static void attachCapability(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Player) {
             event.addCapability(
-                    new ResourceLocation("skyforgemining", "mining_data"),
-                    new MiningProvider()
+                    new ResourceLocation("skyforgemining", "collections"),
+                    new CollectionProvider()
             );
         }
     }
+    @SubscribeEvent
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+
+        if (!event.isWasDeath()) return;
+
+        event.getOriginal().reviveCaps();
+
+        event.getOriginal().getCapability(CollectionProvider.COLLECTION_CAP).ifPresent(oldData -> {
+            event.getEntity().getCapability(CollectionProvider.COLLECTION_CAP).ifPresent(newData -> {
+                newData.loadNBT(oldData.saveNBT());
+            });
+        });
+
+        event.getOriginal().invalidateCaps();
+    }
+
+    /*
+     * =========================
+     * Block Break Logic
+     * =========================
+     */
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
 
         if (event.getPlayer().level().isClientSide) return;
 
         var player = event.getPlayer();
+        var state = event.getState();
         var heldItem = player.getMainHandItem();
 
-        // XP SYSTEM
-        player.getCapability(MiningProvider.MINING_CAP).ifPresent(data -> {
+        // Ignore placed blocks
+        if (placedBlocks.contains(event.getPos())) {
+            placedBlocks.remove(event.getPos());
+            return;
+        }
 
-            data.addXp(10); // 10 XP per block
-
-            int xpRequired = (int)(100 * Math.pow(data.getMiningLevel(), 1.4));
-
-            if (data.getMiningXp() >= xpRequired) {
-                data.levelUp();
-                player.sendSystemMessage(
-                        Component.literal("§6Mining Level Up! §eLevel " + data.getMiningLevel())
-                );
-            }
-        });
-
-        // FORTUNE SYSTEM
-        if (heldItem.getItem() instanceof com.starstag.skyforgemining.item.DrillItem drill) {
-
-            int baseFortune = drill.getBaseMiningFortune();
-            int levelFortune = getMiningFortuneBonus();
-            int totalFortune = baseFortune + levelFortune;
-
-            int extraDrops = totalFortune / 10; // 10 fortune = 1 extra drop
-
-            if (extraDrops > 0) {
-
-                var blockState = event.getState();
-                var drops = net.minecraft.world.level.block.Block.getDrops(
-                        blockState,
-                        (net.minecraft.server.level.ServerLevel) player.level(),
-                        event.getPos(),
-                        null,
-                        player,
-                        heldItem
-                );
-
-                for (var stack : drops) {
-                    stack.grow(extraDrops);
-                    net.minecraft.world.level.block.Block.popResource(
-                            player.level(),
-                            event.getPos(),
-                            stack
-                    );
-                }
-            }
+        // Drill XP
+        if (heldItem.getItem() instanceof DrillItem drill) {
+            int xp = MiningXpType.getXpForBlock(state.getBlock());
+            drill.addXp(heldItem, xp);
         }
     }
 
-    public static int getMiningLevel() {
-        return miningLevel;
-    }
+    @SubscribeEvent
+    public static void onItemPickup(net.minecraftforge.event.entity.player.PlayerEvent.ItemPickupEvent event) {
 
-    public static int getMiningSpeedBonus() {
-        return miningLevel * 2; // 2 speed per level
-    }
+        var player = event.getEntity();
+        var stack = event.getStack();
 
-    public static int getMiningFortuneBonus() {
-        return miningLevel; // 1 fortune per level
+        CollectionType type = CollectionType.fromItem(stack.getItem());
+
+        if (type != null) {
+            player.getCapability(CollectionProvider.COLLECTION_CAP).ifPresent(data -> {
+                data.add(type, stack.getCount());
+            });
+        }
     }
 }
