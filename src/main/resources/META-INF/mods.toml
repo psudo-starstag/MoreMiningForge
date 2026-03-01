@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="skyforgemining"
+version="1.0.0"
+displayName="Skyforge Mining"
+authors="Starstag"
+description='''
+Hypixel-style mining progression mod.
+'''
+
+[[dependencies.skyforgemining]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.skyforgemining]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1]"
+ordering="NONE"
+side="BOTH"
