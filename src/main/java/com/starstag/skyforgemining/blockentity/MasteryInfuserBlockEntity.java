@@ -1,14 +1,17 @@
 package com.starstag.skyforgemining.blockentity;
 
 import com.starstag.skyforgemining.item.DrillItem;
-import net.minecraft.network.FriendlyByteBuf;
+import com.starstag.skyforgemining.menu.MasteryInfuserMenu;
 import com.starstag.skyforgemining.registry.ModBlockEntities;
 import com.starstag.skyforgemining.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -22,69 +25,130 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import com.starstag.skyforgemining.menu.MasteryInfuserMenu;
 
 public class MasteryInfuserBlockEntity extends BlockEntity implements MenuProvider {
 
     /*
-     * Slot 0 = Source Drill
-     * Slot 1 = Target Drill
-     * Slot 2 = Mastery Capsule
+     * Slot 0 = Target Drill (receives mastery)
+     * Slot 1 = Source (drill or capsule)
+     * Output preview stored separately in memory
      */
-    private final ItemStackHandler inventory = new ItemStackHandler(3) {
+    private final ItemStackHandler inventory = new ItemStackHandler(2) {
+
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            if (slot == 0 || slot == 1) return stack.getItem() instanceof DrillItem;
-            if (slot == 2) return stack.getItem() == ModItems.MASTERY_CAPSULE.get();
+            if (slot == 0) return stack.getItem() instanceof DrillItem;
+            if (slot == 1) return stack.getItem() instanceof DrillItem
+                    || stack.getItem() == ModItems.MASTERY_CAPSULE.get();
             return false;
         }
 
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
+            updateOutput();
         }
     };
 
     private final LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> inventory);
+
+    // Output preview — not saved, recalculated from inputs
+    private ItemStack outputPreview = ItemStack.EMPTY;
 
     public MasteryInfuserBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MASTERY_INFUSER.get(), pos, state);
     }
 
     // =========================
-    // TRANSFER LOGIC
+    // OUTPUT PREVIEW
     // =========================
 
-    public void processTransfer() {
-        ItemStack source = inventory.getStackInSlot(0);
-        ItemStack target = inventory.getStackInSlot(1);
-        ItemStack capsule = inventory.getStackInSlot(2);
+    public void updateOutput() {
 
-        // Capsule → Target Drill
-        if (target.getItem() instanceof DrillItem targetDrill
-                && capsule.getItem() == ModItems.MASTERY_CAPSULE.get()) {
+        ItemStack target = inventory.getStackInSlot(0);
+        ItemStack source = inventory.getStackInSlot(1);
 
-            targetDrill.addXp(target, 1000);
-            capsule.shrink(1);
-            setChanged();
+        if (target.isEmpty() || source.isEmpty()
+                || !(target.getItem() instanceof DrillItem)) {
+            outputPreview = ItemStack.EMPTY;
             return;
         }
 
-        // Source Drill → Target Drill
-        if (source.getItem() instanceof DrillItem sourceDrill
-                && target.getItem() instanceof DrillItem targetDrill) {
+        ItemStack preview = target.copy();
 
-            // Get TOTAL xp across all levels, not just current level xp
-            int totalXp = sourceDrill.getTotalXp(source);
-
-            if (totalXp > 0) {
-                targetDrill.addXp(target, totalXp);
-                sourceDrill.resetDrill(source);
-                setChanged();
+        if (preview.getItem() instanceof DrillItem previewDrill) {
+            if (source.getItem() == ModItems.MASTERY_CAPSULE.get()) {
+                previewDrill.addXp(preview, 1000);
+            } else if (source.getItem() instanceof DrillItem sourceDrill) {
+                int totalXp = sourceDrill.getTotalXp(source);
+                previewDrill.addXp(preview, totalXp);
             }
+        }
+
+        outputPreview = preview;
+    }
+
+    public ItemStack getOutputPreview() {
+        return outputPreview;
+    }
+
+    // =========================
+    // TAKE OUTPUT
+    // =========================
+
+    public void takeOutput(Player player) {
+
+        ItemStack target = inventory.getStackInSlot(0);
+        ItemStack source = inventory.getStackInSlot(1);
+
+        if (outputPreview.isEmpty()) return;
+        if (!(target.getItem() instanceof DrillItem targetDrill)) return;
+        if (source.isEmpty()) return;
+
+        // Apply mastery for real
+        if (source.getItem() == ModItems.MASTERY_CAPSULE.get()) {
+            targetDrill.addXp(target, 1000);
+            source.shrink(1);
+            if (source.isEmpty()) {
+                inventory.setStackInSlot(1, ItemStack.EMPTY);
+            }
+        } else if (source.getItem() instanceof DrillItem sourceDrill) {
+            int totalXp = sourceDrill.getTotalXp(source);
+            targetDrill.addXp(target, totalXp);
+            sourceDrill.resetDrill(source);
+            inventory.setStackInSlot(1, ItemStack.EMPTY);
+        }
+
+        // Give upgraded drill to player
+        if (!player.getInventory().add(target)) {
+            player.drop(target, false);
+        }
+
+        // Clear target slot and preview
+        inventory.setStackInSlot(0, ItemStack.EMPTY);
+        outputPreview = ItemStack.EMPTY;
+
+        playSound();
+        setChanged();
+    }
+
+    // =========================
+    // SOUND
+    // =========================
+
+    private void playSound() {
+        if (level != null && !level.isClientSide) {
+            level.playSound(
+                    null,
+                    worldPosition,
+                    SoundEvents.ANVIL_USE,
+                    SoundSource.BLOCKS,
+                    1.0f,
+                    1.0f
+            );
         }
     }
 
@@ -116,7 +180,7 @@ public class MasteryInfuserBlockEntity extends BlockEntity implements MenuProvid
         return new MasteryInfuserMenu(id, inv, this);
     }
 
-    public void writeScreenOpeningData(ServerPlayer player, net.minecraft.network.FriendlyByteBuf buf) {
+    public void writeScreenOpeningData(ServerPlayer player, FriendlyByteBuf buf) {
         buf.writeBlockPos(this.worldPosition);
     }
 
@@ -150,6 +214,7 @@ public class MasteryInfuserBlockEntity extends BlockEntity implements MenuProvid
     @Override
     public void load(CompoundTag tag) {
         inventory.deserializeNBT(tag.getCompound("inventory"));
+        updateOutput();
         super.load(tag);
     }
 
@@ -157,7 +222,7 @@ public class MasteryInfuserBlockEntity extends BlockEntity implements MenuProvid
         return inventory;
     }
 
-    public net.minecraft.nbt.CompoundTag getUpdateTag() {
+    public CompoundTag getUpdateTag() {
         CompoundTag tag = new CompoundTag();
         saveAdditional(tag);
         return tag;

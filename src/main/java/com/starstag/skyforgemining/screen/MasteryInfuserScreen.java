@@ -16,12 +16,11 @@ public class MasteryInfuserScreen extends AbstractContainerScreen<MasteryInfuser
     public MasteryInfuserScreen(MasteryInfuserMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
         this.imageWidth = 176;
-        this.imageHeight = 186;
+        this.imageHeight = 166; // changed from 186
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        // Draws the GUI background texture
         graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
     }
 
@@ -31,24 +30,4 @@ public class MasteryInfuserScreen extends AbstractContainerScreen<MasteryInfuser
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
     }
-
-    @Override
-    protected void init() {
-        super.init();
-
-        // Add transfer button in the middle of the GUI
-        this.addRenderableWidget(
-                new net.minecraft.client.gui.components.Button.Builder(
-                        Component.literal("Transfer"),
-                        button -> {
-                            // Send button click to server
-                            this.minecraft.gameMode.handleInventoryButtonClick(
-                                    this.menu.containerId, 0
-                            );
-                        })
-                        .bounds(leftPos + 140, topPos + 35, 28, 20)
-                        .build()
-        );
-    }
-
 }
