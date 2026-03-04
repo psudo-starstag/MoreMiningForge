@@ -1,10 +1,9 @@
 package com.starstag.skyforgemining.registry;
 
 import com.starstag.skyforgemining.SkyforgeMining;
-import com.starstag.skyforgemining.blockentity.MasteryInfuserBlockEntity;
-import com.starstag.skyforgemining.menu.MasteryInfuserMenu;
+import com.starstag.skyforgemining.menu.DrillStationMenu;
+import com.starstag.skyforgemining.menu.MiningSackMenu;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -16,21 +15,14 @@ public class ModMenus {
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(ForgeRegistries.MENU_TYPES, SkyforgeMining.MODID);
 
-    public static final RegistryObject<MenuType<MasteryInfuserMenu>> MASTERY_INFUSER_MENU =
-            MENUS.register("mastery_infuser_menu",
-                    () -> IForgeMenuType.create((id, inv, data) -> {
+    public static final RegistryObject<MenuType<DrillStationMenu>> DRILL_STATION_MENU =
+            MENUS.register("drill_station_menu",
+                    () -> IForgeMenuType.create((id, inv, data) ->
+                            new DrillStationMenu(id, inv)));
 
-                        // Read block position sent from server
-                        var pos = data.readBlockPos();
-
-                        BlockEntity be = inv.player.level().getBlockEntity(pos);
-
-                        if (be instanceof MasteryInfuserBlockEntity infuser) {
-                            return new MasteryInfuserMenu(id, inv, infuser);
-                        }
-
-                        return null;
-                    }));
+    public static final RegistryObject<MenuType<MiningSackMenu>> MINING_SACK_MENU =
+            MENUS.register("mining_sack",
+                    () -> IForgeMenuType.create(MiningSackMenu::new));
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);

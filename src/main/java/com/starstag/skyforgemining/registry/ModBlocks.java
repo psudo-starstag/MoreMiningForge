@@ -1,7 +1,7 @@
 package com.starstag.skyforgemining.registry;
 
 import com.starstag.skyforgemining.SkyforgeMining;
-import com.starstag.skyforgemining.block.MasteryInfuserBlock;
+import com.starstag.skyforgemining.block.DrillStationBlock;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -24,13 +24,19 @@ public class ModBlocks {
      * BLOCKS
      * =========================
      */
-    public static final RegistryObject<Block> MASTERY_INFUSER_BLOCK =
-            BLOCKS.register("mastery_infuser",
-                    () -> new MasteryInfuserBlock(
+
+    public static final RegistryObject<Block> DRILL_STATION_BLOCK =
+            BLOCKS.register("drill_station",
+                    () -> new DrillStationBlock(
                             BlockBehaviour.Properties.of()
                                     .strength(3.5f)
                                     .requiresCorrectToolForDrops()
                     ));
+
+    public static final RegistryObject<Item> DRILL_STATION_ITEM =
+            BLOCK_ITEMS.register("drill_station",
+                    () -> new BlockItem(DRILL_STATION_BLOCK.get(),
+                            new Item.Properties()));
 
 
     public static void register(IEventBus eventBus) {

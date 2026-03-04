@@ -1,8 +1,45 @@
 {
   "item.skyforgemining.basic_drill": "Basic Drill",
   "item.skyforgemining.divans_drill": "Divan's Drill ♢",
+  "item.skyforgemining.mastery_capsule": "Mastery Capsule",
+
+  "block.skyforgemining.drill_station": "Drill Station",
+  "item.skyforgemining.drill_station": "Drill Station",
+
   "item.skyforgemining.rough_ruby": "Rough Ruby",
-  "creativetab.skyforgemining.skyforge_tab": "Skyforge Mining",
-  "item.skyforgemining.mastery_infuser": "Mastery Infuser",
-  "item.skyforgemining.mastery_capsule": "Mastery Capsule"
+  "item.skyforgemining.rough_sapphire": "Rough Sapphire",
+  "item.skyforgemining.rough_emerald": "Rough Emerald",
+  "item.skyforgemining.rough_amethyst": "Rough Amethyst",
+
+  "item.skyforgemining.flawed_ruby": "Flawed Ruby",
+  "item.skyforgemining.flawed_sapphire": "Flawed Sapphire",
+  "item.skyforgemining.flawed_emerald": "Flawed Emerald",
+  "item.skyforgemining.flawed_amethyst": "Flawed Amethyst",
+
+  "item.skyforgemining.fine_ruby": "Fine Ruby",
+  "item.skyforgemining.fine_sapphire": "Fine Sapphire",
+  "item.skyforgemining.fine_emerald": "Fine Emerald",
+  "item.skyforgemining.fine_amethyst": "Fine Amethyst",
+
+  "item.skyforgemining.flawless_ruby": "Flawless Ruby",
+  "item.skyforgemining.flawless_sapphire": "Flawless Sapphire",
+  "item.skyforgemining.flawless_emerald": "Flawless Emerald",
+  "item.skyforgemining.flawless_amethyst": "Flawless Amethyst",
+
+  "item.skyforgemining.perfect_ruby": "Perfect Ruby",
+  "item.skyforgemining.perfect_sapphire": "Perfect Sapphire",
+  "item.skyforgemining.perfect_emerald": "Perfect Emerald",
+  "item.skyforgemining.perfect_amethyst": "Perfect Amethyst",
+
+  "item.skyforgemining.drill_engine": "Drill Engine",
+  "item.skyforgemining.drill_plate": "Drill Plate",
+  "item.skyforgemining.drill_motor": "Drill Motor",
+  "item.skyforgemining.fuel_tank": "Fuel Tank",
+
+  "item.skyforgemining.basic_sack": "Basic Mining Sack",
+  "item.skyforgemining.reinforced_sack": "Reinforced Mining Sack",
+  "item.skyforgemining.enchanted_sack": "Enchanted Mining Sack",
+  "item.skyforgemining.void_sack": "Void Mining Sack",
+
+  "creativetab.skyforgemining.skyforge_tab": "Skyforge Mining"
 }

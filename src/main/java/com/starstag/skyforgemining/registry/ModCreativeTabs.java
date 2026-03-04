@@ -20,11 +20,56 @@ public class ModCreativeTabs {
                             .icon(() -> new ItemStack(ModItems.BASIC_DRILL.get()))
                             .title(Component.translatable("creativetab.skyforgemining.skyforge_tab"))
                             .displayItems((parameters, output) -> {
+
+                                // Drills
                                 output.accept(ModItems.BASIC_DRILL.get());
                                 output.accept(ModItems.DIVANS_DRILL.get());
-                                output.accept(ModItems.ROUGH_RUBY.get());
+
+                                // Consumables
                                 output.accept(ModItems.MASTERY_CAPSULE.get());
-                                output.accept(ModItems.MASTERY_INFUSER_ITEM.get());
+
+                                // Sacks
+                                output.accept(ModItems.BASIC_SACK.get());
+                                output.accept(ModItems.REINFORCED_SACK.get());
+                                output.accept(ModItems.ENCHANTED_SACK.get());
+                                output.accept(ModItems.VOID_SACK.get());
+
+                                // Gemstones — Ruby
+                                output.accept(ModItems.ROUGH_RUBY.get());
+                                output.accept(ModItems.FLAWED_RUBY.get());
+                                output.accept(ModItems.FINE_RUBY.get());
+                                output.accept(ModItems.FLAWLESS_RUBY.get());
+                                output.accept(ModItems.PERFECT_RUBY.get());
+
+                                // Gemstones — Sapphire
+                                output.accept(ModItems.ROUGH_SAPPHIRE.get());
+                                output.accept(ModItems.FLAWED_SAPPHIRE.get());
+                                output.accept(ModItems.FINE_SAPPHIRE.get());
+                                output.accept(ModItems.FLAWLESS_SAPPHIRE.get());
+                                output.accept(ModItems.PERFECT_SAPPHIRE.get());
+
+                                // Gemstones — Emerald
+                                output.accept(ModItems.ROUGH_EMERALD.get());
+                                output.accept(ModItems.FLAWED_EMERALD.get());
+                                output.accept(ModItems.FINE_EMERALD.get());
+                                output.accept(ModItems.FLAWLESS_EMERALD.get());
+                                output.accept(ModItems.PERFECT_EMERALD.get());
+
+                                // Gemstones — Amethyst
+                                output.accept(ModItems.ROUGH_AMETHYST.get());
+                                output.accept(ModItems.FLAWED_AMETHYST.get());
+                                output.accept(ModItems.FINE_AMETHYST.get());
+                                output.accept(ModItems.FLAWLESS_AMETHYST.get());
+                                output.accept(ModItems.PERFECT_AMETHYST.get());
+
+                                // Drill Parts
+                                output.accept(ModItems.DRILL_ENGINE.get());
+                                output.accept(ModItems.DRILL_PLATE.get());
+                                output.accept(ModItems.DRILL_MOTOR.get());
+                                output.accept(ModItems.FUEL_TANK.get());
+
+                                // Blocks
+                                output.accept(ModBlocks.DRILL_STATION_ITEM.get());
                             })
                             .build()
             );
